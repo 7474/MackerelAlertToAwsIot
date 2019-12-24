@@ -16,7 +16,7 @@ GPIO.setup(chan_list, GPIO.OUT)
 
 def hl():
     # TODO 後で消す
-    return random.random() > 0.5 ? 1: 0
+    return 1 if random.random() > 0.5 else 0
 
 
 def handler(event, context):
