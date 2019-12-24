@@ -1,0 +1,23 @@
+{
+  "name": "mackerel-alert-to-aws-iot",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "cdk": "cdk",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mackerel",
+    "aws",
+    "iot",
+    "eventbridge",
+    "cdk",
+    "csharp"
+  ],
+  "author": "koudenpa",
+  "license": "MIT",
+  "devDependencies": {
+    "aws-cdk": "^1.19.0"
+  }
+}
