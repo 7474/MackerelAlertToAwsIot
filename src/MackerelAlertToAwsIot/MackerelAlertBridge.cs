@@ -12,6 +12,7 @@ namespace MackerelAlertToAwsIot
 
     public class MackerelAlertBridgeStack : Stack
     {
+        public IRule AlertRule { get; private set; }
         internal MackerelAlertBridgeStack(Construct scope, string id, MackerelAlertBridgeProps mackerelAlertBridgeProps, IStackProps props = null) : base(scope, id, props)
         {
             var eventSourceName = $"aws.partner/mackerel.io/{mackerelAlertBridgeProps.OrganizationName}/{mackerelAlertBridgeProps.EventName}";
@@ -25,13 +26,15 @@ namespace MackerelAlertToAwsIot
                 EventBus = mackerelAlertBus,
                 EventPattern = new EventPattern()
                 {
+                    // TODO わかったら書く
                     Source = new string[]{
                         "aws.partner/mackerel.io",
                     },
-                    // TODO わかったら書く
                 },
-                Targets = mackerelAlertBridgeProps.Targets,
+                //Targets = mackerelAlertBridgeProps.Targets,
             });
+
+            AlertRule = mackerelAlertRule;
         }
     }
 }
