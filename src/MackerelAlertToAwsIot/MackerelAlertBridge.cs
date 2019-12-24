@@ -18,7 +18,9 @@ namespace MackerelAlertToAwsIot
             var eventSourceName = $"aws.partner/mackerel.io/{mackerelAlertBridgeProps.OrganizationName}/{mackerelAlertBridgeProps.EventName}";
             var mackerelAlertBus = new EventBus(this, "mackerel-alert-bus", new EventBusProps()
             {
-                EventSourceName = eventSourceName,
+                // TODO EventSourceName にする
+                EventBusName = "test",
+                //EventSourceName = eventSourceName,
             });
 
             var mackerelAlertRule = new Rule(this, "mackerel-alert-rule", new RuleProps()
