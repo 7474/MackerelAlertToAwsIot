@@ -11,11 +11,6 @@ namespace MackerelAlertToAwsIot
             };
             var app = new App();
 
-            var mackerelAlertLamp = new MackerelAlertLampStack(app, "MackerelAlertLamp", new MackerelAlertLampProps()
-            {
-                Env = env,
-            });
-
             var mackerelAlertBridge = new MackerelAlertBridgeStack(app, "MackerelAlertBridge", new MackerelAlertBridgeProps()
             {
                 Env = env,
@@ -25,7 +20,13 @@ namespace MackerelAlertToAwsIot
                     //mackerelAlertLamp.MaclerelAlertHandler,
                 },
             });
-            mackerelAlertLamp.MaclerelAlertHandler.Bind(mackerelAlertBridge.AlertRule);
+
+            var mackerelAlertLamp = new MackerelAlertLampStack(app, "MackerelAlertLamp", new MackerelAlertLampProps()
+            {
+                Env = env,
+                AlertBus = mackerelAlertBridge.AlertBus,
+            });
+
 
             app.Synth();
         }

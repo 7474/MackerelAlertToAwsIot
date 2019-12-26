@@ -8,23 +8,29 @@ namespace MackerelAlertToAwsIot
 {
     public class MackerelAlertLampProps : StackProps
     {
+        public IEventBus AlertBus { get; set; }
     }
 
-    //https://dev.classmethod.jp/cloud/aws/aws-cdk-greengrass-rasberrypi/
+    // Ref: https://dev.classmethod.jp/cloud/aws/aws-cdk-greengrass-rasberrypi/
     public class MackerelAlertLampStack : Stack
     {
-        public IRuleTarget MaclerelAlertHandler { get; private set; }
-
         internal MackerelAlertLampStack(Construct scope, string id, MackerelAlertLampProps props) : base(scope, id, props)
         {
-            var ggLambda = new Function(this, "MackerelAlertLampLambda", new FunctionProps()
+            var cloudReceiveAlertFunction = new Function(this, "CloudReceiveAlert", new FunctionProps()
             {
                 Runtime = Runtime.PYTHON_3_7,
-                Code = Code.FromAsset("handlers"),
-                Handler = "MackerelAlertLampLambda.handler",
+                Code = Code.FromAsset("handlers/cloud"),
+                Handler = "ReceiveAlert.handler",
             });
 
-            var ggLambdaAlias = new Alias(this, "MackerelAlertLampLambdaAlias", new AliasProps()
+            var ggLambda = new Function(this, "DeviceReceiveAlert", new FunctionProps()
+            {
+                Runtime = Runtime.PYTHON_3_7,
+                Code = Code.FromAsset("handlers/device"),
+                Handler = "ReceiveAlert.handler",
+            });
+
+            var ggLambdaAlias = new Alias(this, "DeviceReceiveAlertAlias", new AliasProps()
             {
                 AliasName = "v1",
                 Version = ggLambda.LatestVersion,
@@ -80,7 +86,21 @@ namespace MackerelAlertToAwsIot
             //ggGroup.AddDependsOn(ggResource);
             ggGroup.AddDependsOn(ggFunction);
 
-            MaclerelAlertHandler = new LambdaFunction(ggLambdaAlias.Lambda);
+            var mackerelAlertRule = new Rule(this, "mackerel-alert-rule", new RuleProps()
+            {
+                EventBus = props.AlertBus,
+                EventPattern = new EventPattern()
+                {
+                    // TODO ÇÌÇ©Ç¡ÇΩÇÁèëÇ≠
+                    Source = new string[]{
+                        "aws.partner/mackerel.io",
+                    },
+                },
+                Targets = new IRuleTarget[] {
+                    new LambdaFunction(cloudReceiveAlertFunction),
+                    new LambdaFunction(ggLambda),
+                },
+            });
         }
     }
 }
