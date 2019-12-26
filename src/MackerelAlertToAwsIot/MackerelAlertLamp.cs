@@ -34,6 +34,10 @@ namespace MackerelAlertToAwsIot
             {
                 Name = "MackerelAlertLampCore",
                 // モノは手で登録する、、、だとドリフトするのか？　だとしたらだるい。。。
+                InitialVersion = new CfnCoreDefinition.CoreDefinitionVersionProperty()
+                {
+                    Cores = new CfnCoreDefinition.CoreProperty[] { }
+                }
             });
 
             //var ggResource = new CfnResourceDefinition(this, "MackerelAlertLampResource", new CfnResourceDefinitionProps()
@@ -54,6 +58,9 @@ namespace MackerelAlertToAwsIot
                             FunctionArn = ggLambdaAlias.FunctionArn,
                             FunctionConfiguration = new CfnFunctionDefinition.FunctionConfigurationProperty()
                             {
+                                // MemorySize と Timeout は必須である様子
+                                MemorySize = 65535,
+                                Timeout = 10,   // 秒
                             },
                         },
                     },
