@@ -6,7 +6,7 @@ using Amazon.CDK.AWS.Events.Targets;
 
 namespace MackerelAlertToAwsIot
 {
-    public class MackerelAlertLampProps
+    public class MackerelAlertLampProps : StackProps
     {
     }
 
@@ -15,7 +15,7 @@ namespace MackerelAlertToAwsIot
     {
         public IRuleTarget MaclerelAlertHandler { get; private set; }
 
-        internal MackerelAlertLampStack(Construct scope, string id, MackerelAlertLampProps MackerelLampProps, IStackProps props = null) : base(scope, id, props)
+        internal MackerelAlertLampStack(Construct scope, string id, MackerelAlertLampProps props) : base(scope, id, props)
         {
             var ggLambda = new Function(this, "MackerelAlertLampLambda", new FunctionProps()
             {
