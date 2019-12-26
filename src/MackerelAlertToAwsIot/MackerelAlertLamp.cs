@@ -39,7 +39,7 @@ namespace MackerelAlertToAwsIot
             var ggCore = new CfnCoreDefinition(this, "MackerelAlertLampCore", new CfnCoreDefinitionProps()
             {
                 Name = "MackerelAlertLampCore",
-                // ƒ‚ƒm‚Íè‚Å“o˜^‚·‚éAAA‚¾‚ÆƒhƒŠƒtƒg‚·‚é‚Ì‚©H@‚¾‚Æ‚µ‚½‚ç‚¾‚é‚¢BBB
+                // ãƒ¢ãƒã¯æ‰‹ã§ç™»éŒ²ã™ã‚‹ã€ã€ã€ã ã¨ãƒ‰ãƒªãƒ•ãƒˆã™ã‚‹ã®ã‹ï¼Ÿã€€ã ã¨ã—ãŸã‚‰ã ã‚‹ã„ã€‚ã€‚ã€‚
                 InitialVersion = new CfnCoreDefinition.CoreDefinitionVersionProperty()
                 {
                     Cores = new CfnCoreDefinition.CoreProperty[] { }
@@ -64,9 +64,9 @@ namespace MackerelAlertToAwsIot
                             FunctionArn = ggLambdaAlias.FunctionArn,
                             FunctionConfiguration = new CfnFunctionDefinition.FunctionConfigurationProperty()
                             {
-                                // MemorySize ‚Æ Timeout ‚Í•K{‚Å‚ ‚é—lq
+                                // MemorySize ã¨ Timeout ã¯å¿…é ˆã§ã‚ã‚‹æ§˜å­
                                 MemorySize = 65535,
-                                Timeout = 10,   // •b
+                                Timeout = 10,   // ç§’
                             },
                         },
                     },
@@ -91,7 +91,7 @@ namespace MackerelAlertToAwsIot
                 EventBus = props.AlertBus,
                 EventPattern = new EventPattern()
                 {
-                    // TODO ‚í‚©‚Á‚½‚ç‘‚­
+                    // TODO ã‚ã‹ã£ãŸã‚‰æ›¸ã
                     Source = new string[]{
                         "aws.partner/mackerel.io",
                     },
