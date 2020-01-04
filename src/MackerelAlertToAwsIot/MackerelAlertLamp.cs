@@ -127,11 +127,29 @@ namespace MackerelAlertToAwsIot
                 ggCore.AddDependsOn(x.Thing);
             });
 
-            //var ggResource = new CfnResourceDefinition(this, "MackerelAlertLampResource", new CfnResourceDefinitionProps()
-            //{
-            //    Name = "MackerelAlertLampResource",
-            //    // T.B.D.
-            //});
+            var gpioRw = new CfnResourceDefinition.ResourceInstanceProperty()
+            {
+                Id = "1",
+                Name = "RaspberryPiGpioRw",
+                ResourceDataContainer = new CfnResourceDefinition.ResourceDataContainerProperty()
+                {
+                    LocalDeviceResourceData = new CfnResourceDefinition.LocalDeviceResourceDataProperty()
+                    {
+                        SourcePath = "/dev/gpiomem",
+                    }
+                },
+            };
+            var ggResource = new CfnResourceDefinition(this, "MackerelAlertLampResource", new CfnResourceDefinitionProps()
+            {
+                Name = "MackerelAlertLampResource",
+                InitialVersion = new CfnResourceDefinition.ResourceDefinitionVersionProperty()
+                {
+                    Resources = new CfnResourceDefinition.ResourceInstanceProperty[]
+                    {
+                        gpioRw,
+                    }
+                },
+            });
 
             var ggFunction = new CfnFunctionDefinition(this, "MackerelAlertLampFunction", new CfnFunctionDefinitionProps()
             {
@@ -154,6 +172,29 @@ namespace MackerelAlertToAwsIot
                 },
             });
 
+            var ggConnector = new CfnConnectorDefinition(this, "MackerelAlertLampConnector", new CfnConnectorDefinitionProps()
+            {
+                Name = "MackerelAlertLampConnector",
+                InitialVersion = new CfnConnectorDefinition.ConnectorDefinitionVersionProperty()
+                {
+                    Connectors = new CfnConnectorDefinition.ConnectorProperty[]{
+                        new CfnConnectorDefinition.ConnectorProperty()
+                        {
+                            Id = "1",
+                            ConnectorArn = $"arn:aws:greengrass:{this.Region}::/connectors/RaspberryPiGPIO/versions/1",
+                            Parameters = new Dictionary<string, object>()
+                            {
+                                ["GpioMem-ResourceId"] = gpioRw.Id,
+                                //["InputGpios"] = "5,6U,7D",
+                                //["InputPollPeriod"] = 50,
+                                // 10, 9, 11番は配置連続しているのでとりあえずそれを使う
+                                ["OutputGpios"] = "9L,10L,11L",
+                            }
+                        },
+                    },
+                }
+            });
+
             var ggGroup = new CfnGroup(this, "MackerelAlertLampGroup", new CfnGroupProps()
             {
                 Name = "MackerelAlertLamp",
@@ -161,11 +202,14 @@ namespace MackerelAlertToAwsIot
                 {
                     CoreDefinitionVersionArn = ggCore.AttrLatestVersionArn,
                     FunctionDefinitionVersionArn = ggFunction.AttrLatestVersionArn,
+                    ResourceDefinitionVersionArn = ggResource.AttrLatestVersionArn,
+                    ConnectorDefinitionVersionArn = ggConnector.AttrLatestVersionArn,
                 },
             });
             ggGroup.AddDependsOn(ggCore);
-            //ggGroup.AddDependsOn(ggResource);
+            ggGroup.AddDependsOn(ggResource);
             ggGroup.AddDependsOn(ggFunction);
+            ggGroup.AddDependsOn(ggConnector);
 
             var mackerelAlertRule = new Rule(this, "mackerel-alert-rule", new RuleProps()
             {
