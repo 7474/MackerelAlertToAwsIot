@@ -1,9 +1,12 @@
 {
-    "MackerelAlertBridgeProps": {
-        "StsExternalId": "Pb4veTnup3gxas21J55tiLq6eaK1NUWlNs61te8m",
-        "OrganizationName": "koudenpa-1",
-        "EventName": "trial_alerts"
-    },
-    "MackerelAlertLampProps": {
-    }
+  "MackerelAlertBridgeProps": {
+    "StsExternalId": "Pb4veTnup3gxas21J55tiLq6eaK1NUWlNs61te8m",
+    "OrganizationName": "koudenpa-1",
+    "EventName": "trial_alerts"
+  },
+  "MackerelAlertLampProps": {
+    "ThingCerts": [
+      "arn:aws:iot:ap-northeast-1:854403262515:cert/b313d6a074a3c768640be3750b0d141321bf17c4c7bb9e47df7aac927607f2be"
+    ]
+  }
 }

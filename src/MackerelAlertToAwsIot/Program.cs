@@ -35,6 +35,10 @@ namespace MackerelAlertToAwsIot
             foreach (var p in typeof(T).GetProperties())
             {
                 object value = section[p.Name];
+                if (value == null)
+                {
+                    value = section.GetSection(p.Name)?.Get(p.PropertyType);
+                }
                 System.Console.Out.WriteLine("{0}: {1}", p.Name, value);
                 if (value != null)
                 {
