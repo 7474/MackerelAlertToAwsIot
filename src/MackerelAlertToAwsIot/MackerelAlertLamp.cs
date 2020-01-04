@@ -137,6 +137,10 @@ namespace MackerelAlertToAwsIot
                     LocalDeviceResourceData = new CfnResourceDefinition.LocalDeviceResourceDataProperty()
                     {
                         SourcePath = "/dev/gpiomem",
+                        GroupOwnerSetting = new CfnResourceDefinition.GroupOwnerSettingProperty()
+                        {
+                            AutoAddGroupOwner = true,
+                        },
                     }
                 },
             };
