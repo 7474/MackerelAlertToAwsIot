@@ -7,7 +7,6 @@ using Amazon.CDK.AWS.Lambda;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace MackerelAlertToAwsIot
@@ -48,12 +47,11 @@ namespace MackerelAlertToAwsIot
             });
 
             // IDなどに使うために証明書のARNを加工しておく。
-            var sha1 = new SHA1CryptoServiceProvider();
             var certs = props.ThingCerts
                    .Select(x => new
                    {
                        Arn = x,
-                       Hash = BitConverter.ToString(sha1.ComputeHash(Encoding.UTF8.GetBytes(x))).Replace("-", ""),
+                       Hash = Utils.ToHash(x),
                    }).ToList();
             var certAttaches = certs.Select(x =>
             {
@@ -99,11 +97,23 @@ namespace MackerelAlertToAwsIot
                 Handler = "ReceiveAlert.handler",
             });
             var ggLambdaVersion = ggLambda.AddVersion("v1");
-
             var ggLambdaAlias = new Alias(this, "DeviceReceiveAlertAlias", new AliasProps()
             {
-                AliasName = "v1",
+                AliasName = "v" + ggLambdaVersion.Version,
                 Version = ggLambdaVersion,
+            });
+
+            var toggleGpio = new Function(this, "DeviceToggleGpio", new FunctionProps()
+            {
+                Runtime = Runtime.PYTHON_3_7,
+                Code = Code.FromAsset("handlers/device"),
+                Handler = "ToggleGpio.handler",
+            });
+            var toggleGpioVersion = toggleGpio.AddVersion("v1");
+            var toggleGpioAlias = new Alias(this, "DeviceToggleGpioAlias", new AliasProps()
+            {
+                AliasName = "v" + toggleGpioVersion.Version,
+                Version = toggleGpioVersion,
             });
 
             var ggCoreId = 0;
@@ -130,7 +140,7 @@ namespace MackerelAlertToAwsIot
 
             var gpioRw = new CfnResourceDefinition.ResourceInstanceProperty()
             {
-                Id = "1",
+                Id = "gpio-rw",
                 Name = "RaspberryPiGpioRw",
                 ResourceDataContainer = new CfnResourceDefinition.ResourceDataContainerProperty()
                 {
@@ -164,8 +174,18 @@ namespace MackerelAlertToAwsIot
                     Functions = new CfnFunctionDefinition.FunctionProperty[]
                     {
                         new CfnFunctionDefinition.FunctionProperty(){
-                            Id = "1",
+                            Id = ggLambda.FunctionName + "-" + ggLambdaAlias.AliasName,
                             FunctionArn = ggLambdaAlias.FunctionArn,
+                            FunctionConfiguration = new CfnFunctionDefinition.FunctionConfigurationProperty()
+                            {
+                                // MemorySize と Timeout は必須である様子
+                                MemorySize = 65535,
+                                Timeout = 10,   // 秒
+                            },
+                        },
+                        new CfnFunctionDefinition.FunctionProperty(){
+                            Id = toggleGpio.FunctionName + "-" + toggleGpioAlias.AliasName,
+                            FunctionArn = toggleGpioAlias.FunctionArn,
                             FunctionConfiguration = new CfnFunctionDefinition.FunctionConfigurationProperty()
                             {
                                 // MemorySize と Timeout は必須である様子
@@ -177,45 +197,152 @@ namespace MackerelAlertToAwsIot
                 },
             });
 
+            // https://docs.aws.amazon.com/ja_jp/greengrass/latest/developerguide/raspberrypi-gpio-connector.html
+            var gpioConnector = new CfnConnectorDefinition.ConnectorProperty()
+            {
+                Id = "gpio-connector",
+                ConnectorArn = $"arn:aws:greengrass:{this.Region}::/connectors/RaspberryPiGPIO/versions/1",
+                Parameters = new Dictionary<string, object>()
+                {
+                    ["GpioMem-ResourceId"] = gpioRw.Id,
+                    //["InputGpios"] = "5,6U,7D",
+                    //["InputPollPeriod"] = 50,
+                    // 10, 9, 11番は配置連続しているのでとりあえずそれを使う
+                    ["OutputGpios"] = "9L,10L,11L",
+                }
+            };
             var ggConnector = new CfnConnectorDefinition(this, "MackerelAlertLampConnector", new CfnConnectorDefinitionProps()
             {
                 Name = "MackerelAlertLampConnector",
                 InitialVersion = new CfnConnectorDefinition.ConnectorDefinitionVersionProperty()
                 {
                     Connectors = new CfnConnectorDefinition.ConnectorProperty[]{
-                        // https://docs.aws.amazon.com/ja_jp/greengrass/latest/developerguide/raspberrypi-gpio-connector.html
-                        new CfnConnectorDefinition.ConnectorProperty()
-                        {
-                            Id = "1",
-                            ConnectorArn = $"arn:aws:greengrass:{this.Region}::/connectors/RaspberryPiGPIO/versions/1",
-                            Parameters = new Dictionary<string, object>()
-                            {
-                                ["GpioMem-ResourceId"] = gpioRw.Id,
-                                //["InputGpios"] = "5,6U,7D",
-                                //["InputPollPeriod"] = 50,
-                                // 10, 9, 11番は配置連続しているのでとりあえずそれを使う
-                                ["OutputGpios"] = "9L,10L,11L",
-                            }
-                        },
+                        gpioConnector,
                     },
                 }
             });
 
+            var ggSubscription = new CfnSubscriptionDefinition(this, "MackerelAlertLampSubscription", new CfnSubscriptionDefinitionProps()
+            {
+                Name = "MackerelAlertLampSubscription",
+            });
+            var ggSubscriptions = new CfnSubscriptionDefinitionVersion.SubscriptionProperty[]
+                {
+                    // XXX Currently, when you create a subscription that uses the Raspberry Pi GPIO connector, you must specify a value for at least one of the + wildcards in the topic.
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-read",
+                        Source = "cloud",
+                        Target = gpioConnector.ConnectorArn,
+                        Subject ="gpio/+/9/read",
+                    },
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-write",
+                        Source = "cloud",
+                        Target = gpioConnector.ConnectorArn,
+                        Subject ="gpio/+/9/write",
+                    },
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-state",
+                        Source = gpioConnector.ConnectorArn,
+                        Target = "cloud",
+                        Subject ="gpio/+/9/state",
+                    },
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-error",
+                        Source = gpioConnector.ConnectorArn,
+                        Target = "cloud",
+                        Subject ="gpio/+/error",
+                    },
+                    //
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-read-10",
+                        Source = "cloud",
+                        Target = gpioConnector.ConnectorArn,
+                        Subject ="gpio/+/10/read",
+                    },
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-write-10",
+                        Source = "cloud",
+                        Target = gpioConnector.ConnectorArn,
+                        Subject ="gpio/+/10/write",
+                    },
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-state-10",
+                        Source = gpioConnector.ConnectorArn,
+                        Target = "cloud",
+                        Subject ="gpio/+/10/state",
+                    },
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-read-11",
+                        Source = toggleGpioAlias.FunctionArn,
+                        Target = gpioConnector.ConnectorArn,
+                        Subject ="gpio/+/11/read",
+                    },
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-write-11",
+                        Source = toggleGpioAlias.FunctionArn,
+                        Target = gpioConnector.ConnectorArn,
+                        Subject ="gpio/+/11/write",
+                    },
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-state-11",
+                        Source = gpioConnector.ConnectorArn,
+                        Target = "cloud",
+                        Subject ="gpio/+/11/state",
+                    },
+                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    {
+                        Id = "gpio-test",
+                        Source = "cloud",
+                        Target = toggleGpioAlias.FunctionArn,
+                        Subject ="gpio/test",
+                    },
+                };
+            var ggLatestSubscription = new CfnSubscriptionDefinitionVersion(this,
+                "MackerelAlertLampSubscriptionVersion-" + Utils.ToHash(string.Join("-", ggSubscriptions.Select(x => x.Id))),
+                new CfnSubscriptionDefinitionVersionProps()
+                {
+                    SubscriptionDefinitionId = ggSubscription.AttrId,
+                    Subscriptions = ggSubscriptions,
+                });
+
             var ggGroup = new CfnGroup(this, "MackerelAlertLampGroup", new CfnGroupProps()
             {
                 Name = "MackerelAlertLamp",
-                InitialVersion = new CfnGroup.GroupVersionProperty()
-                {
-                    CoreDefinitionVersionArn = ggCore.AttrLatestVersionArn,
-                    FunctionDefinitionVersionArn = ggFunction.AttrLatestVersionArn,
-                    ResourceDefinitionVersionArn = ggResource.AttrLatestVersionArn,
-                    ConnectorDefinitionVersionArn = ggConnector.AttrLatestVersionArn,
-                },
+                // XXX 引数にする
+                RoleArn = "arn:aws:iam::854403262515:role/service-role/Greengrass_ServiceRole",
             });
-            ggGroup.AddDependsOn(ggCore);
-            ggGroup.AddDependsOn(ggResource);
-            ggGroup.AddDependsOn(ggFunction);
-            ggGroup.AddDependsOn(ggConnector);
+            var ggVersionHash = Utils.ToHash(string.Join("-",
+                    ggCore.AttrLatestVersionArn,
+                    ggFunction.AttrLatestVersionArn,
+                    ggResource.AttrLatestVersionArn,
+                    ggConnector.AttrLatestVersionArn,
+                    ggSubscription.AttrLatestVersionArn));
+            var ggLatestVersion = new CfnGroupVersion(this, "MackerelAlertLampGroupVersion-" + ggVersionHash, new CfnGroupVersionProps()
+            {
+                GroupId = ggGroup.AttrId,
+                CoreDefinitionVersionArn = ggCore.AttrLatestVersionArn,
+                FunctionDefinitionVersionArn = ggFunction.AttrLatestVersionArn,
+                ResourceDefinitionVersionArn = ggResource.AttrLatestVersionArn,
+                ConnectorDefinitionVersionArn = ggConnector.AttrLatestVersionArn,
+                SubscriptionDefinitionVersionArn = ggSubscription.AttrLatestVersionArn,
+            });
+            ggLatestVersion.AddDependsOn(ggGroup);
+            ggLatestVersion.AddDependsOn(ggCore);
+            ggLatestVersion.AddDependsOn(ggResource);
+            ggLatestVersion.AddDependsOn(ggFunction);
+            ggLatestVersion.AddDependsOn(ggConnector);
+            ggLatestVersion.AddDependsOn(ggSubscription);
 
             var mackerelAlertRule = new Rule(this, "mackerel-alert-rule", new RuleProps()
             {
