@@ -6,7 +6,7 @@
   },
   "MackerelAlertLampProps": {
     "ThingCerts": [
-      "arn:aws:iot:ap-northeast-1:854403262515:cert/b313d6a074a3c768640be3750b0d141321bf17c4c7bb9e47df7aac927607f2be"
+      "arn:aws:iot:ap-northeast-1:854403262515:cert/b799d423ea5bfd3fc3b657cb8bf8fd6c73779c5e5ccffeebc9cb11c48cdfdddb"
     ]
   }
 }
