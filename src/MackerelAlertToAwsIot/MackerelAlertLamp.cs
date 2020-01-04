@@ -98,11 +98,12 @@ namespace MackerelAlertToAwsIot
                 Code = Code.FromAsset("handlers/device"),
                 Handler = "ReceiveAlert.handler",
             });
+            var ggLambdaVersion = ggLambda.AddVersion("v1");
 
             var ggLambdaAlias = new Alias(this, "DeviceReceiveAlertAlias", new AliasProps()
             {
                 AliasName = "v1",
-                Version = ggLambda.LatestVersion,
+                Version = ggLambdaVersion,
             });
 
             var ggCoreId = 0;
@@ -178,6 +179,7 @@ namespace MackerelAlertToAwsIot
                 InitialVersion = new CfnConnectorDefinition.ConnectorDefinitionVersionProperty()
                 {
                     Connectors = new CfnConnectorDefinition.ConnectorProperty[]{
+                        // https://docs.aws.amazon.com/ja_jp/greengrass/latest/developerguide/raspberrypi-gpio-connector.html
                         new CfnConnectorDefinition.ConnectorProperty()
                         {
                             Id = "1",
