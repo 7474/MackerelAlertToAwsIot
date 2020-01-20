@@ -2,6 +2,7 @@ using Amazon.CDK;
 using Amazon.CDK.AWS.Events;
 using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.Greengrass;
+using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.IoT;
 using Amazon.CDK.AWS.Lambda;
 using System;
@@ -24,7 +25,7 @@ namespace MackerelAlertToAwsIot
         {
             System.Console.Out.WriteLine(string.Join(",", props.ThingCerts));
 
-            var thingPolicy = new CfnPolicy(this, "MackerelAlertLampThingPoilcy", new CfnPolicyProps()
+            var thingPolicy = new Amazon.CDK.AWS.IoT.CfnPolicy(this, "MackerelAlertLampThingPoilcy", new Amazon.CDK.AWS.IoT.CfnPolicyProps()
             {
                 PolicyName = "MackerelAlertLampThingPoilcy",
                 PolicyDocument = new Dictionary<string, object>
@@ -83,12 +84,28 @@ namespace MackerelAlertToAwsIot
                 return attach;
             }).ToList();
 
+            var mackerelAlertTopic = props.AlertBus.EventSourceName;
             var cloudReceiveAlertFunction = new Function(this, "CloudReceiveAlert", new FunctionProps()
             {
                 Runtime = Runtime.PYTHON_3_7,
                 Code = Code.FromAsset("handlers/cloud"),
                 Handler = "ReceiveAlert.handler",
+                Environment = new Dictionary<string, string>()
+                {
+                    ["MACKEREL_ALERT_TOPIC"] = mackerelAlertTopic,
+                },
             });
+            cloudReceiveAlertFunction.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps()
+            {
+                Actions = new string[]
+                {
+                    "iot:Publish",
+                },
+                Resources = new string[]
+                {
+                    "*",
+                },
+            }));
 
             var ggLambda = new Function(this, "DeviceReceiveAlert", new FunctionProps()
             {
@@ -228,6 +245,13 @@ namespace MackerelAlertToAwsIot
             });
             var ggSubscriptions = new CfnSubscriptionDefinitionVersion.SubscriptionProperty[]
                 {
+                    // ReceiveAlert Cloud to Device
+                    // new CfnSubscriptionDefinitionVersion.SubscriptionProperty() {
+                    //     Id = "mackerel-alert-iot-to-device",
+                    //     Source = "cloud",
+                    //     Target = ggLambdaVersion.FunctionArn,
+                    //     Subject = mackerelAlertTopic,
+                    // },
                     // XXX Currently, when you create a subscription that uses the Raspberry Pi GPIO connector, you must specify a value for at least one of the + wildcards in the topic.
                     new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
                     {
@@ -316,7 +340,7 @@ namespace MackerelAlertToAwsIot
                     Subscriptions = ggSubscriptions,
                 });
 
-            var ggGroup = new CfnGroup(this, "MackerelAlertLampGroup", new CfnGroupProps()
+            var ggGroup = new Amazon.CDK.AWS.Greengrass.CfnGroup(this, "MackerelAlertLampGroup", new Amazon.CDK.AWS.Greengrass.CfnGroupProps()
             {
                 Name = "MackerelAlertLamp",
                 // XXX 引数にする

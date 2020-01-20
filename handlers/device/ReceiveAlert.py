@@ -28,7 +28,7 @@ def handler(event, context):
     logger.info(type(event))
 
     status_to_sec = {'ok': 3, 'warning': 6, 'critical': 9, 'unknown': 9}
-    taiyo_sec = status_to_sec.get(event.alert.status, 9)
+    taiyo_sec = status_to_sec.get(event.detail.alert.status, 9)
 
     # 太陽拳する
     set_gpio_state(11, 1)
