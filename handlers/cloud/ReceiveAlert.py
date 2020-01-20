@@ -1,12 +1,19 @@
-import json
 import os
+import json
+import boto3
 
-# https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/python-logging.html
+print('Loading function')
+
+iot = boto3.client('iot-data')
 
 
 def handler(event, context):
-    print('## ENVIRONMENT VARIABLES')
-    print(os.environ)
-    print('## EVENT')
+    # 単にペイロードをデバイスにバイパスする。
+    topic = os.environ['MACKEREL_ALERT_TOPIC']
+    print('Publish to: ' + topic)
     print(event)
-    return
+    iot.publish(
+        topic=topic,
+        qos=0,
+        payload=json.dumps(event, ensure_ascii=False)
+    )
