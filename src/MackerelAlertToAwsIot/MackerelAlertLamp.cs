@@ -239,42 +239,46 @@ namespace MackerelAlertToAwsIot
                 }
             });
 
-            var ggSubscription = new CfnSubscriptionDefinition(this, "MackerelAlertLampSubscription", new CfnSubscriptionDefinitionProps()
-            {
-                Name = "MackerelAlertLampSubscription",
-            });
-            var ggSubscriptions = new CfnSubscriptionDefinitionVersion.SubscriptionProperty[]
+            var ggSubscriptions = new CfnSubscriptionDefinition.SubscriptionProperty[]
                 {
                     // ReceiveAlert Cloud to Device
-                    // new CfnSubscriptionDefinitionVersion.SubscriptionProperty() {
-                    //     Id = "mackerel-alert-iot-to-device",
-                    //     Source = "cloud",
-                    //     Target = ggLambdaVersion.FunctionArn,
-                    //     Subject = mackerelAlertTopic,
-                    // },
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
+                    {
+                        Id = "mackerel-alert-to-device",
+                        Source = "cloud",
+                        Target = ggLambdaAlias.FunctionArn,
+                        Subject = mackerelAlertTopic,
+                    },
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
+                    {
+                        Id = "mackerel-alert-gpio-write-11",
+                        Source = ggLambdaAlias.FunctionArn,
+                        Target = gpioConnector.ConnectorArn,
+                        Subject ="gpio/+/11/write",
+                    },
                     // XXX Currently, when you create a subscription that uses the Raspberry Pi GPIO connector, you must specify a value for at least one of the + wildcards in the topic.
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-read",
                         Source = "cloud",
                         Target = gpioConnector.ConnectorArn,
                         Subject ="gpio/+/9/read",
                     },
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-write",
                         Source = "cloud",
                         Target = gpioConnector.ConnectorArn,
                         Subject ="gpio/+/9/write",
                     },
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-state",
                         Source = gpioConnector.ConnectorArn,
                         Target = "cloud",
                         Subject ="gpio/+/9/state",
                     },
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-error",
                         Source = gpioConnector.ConnectorArn,
@@ -282,49 +286,49 @@ namespace MackerelAlertToAwsIot
                         Subject ="gpio/+/error",
                     },
                     //
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-read-10",
                         Source = "cloud",
                         Target = gpioConnector.ConnectorArn,
                         Subject ="gpio/+/10/read",
                     },
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-write-10",
                         Source = "cloud",
                         Target = gpioConnector.ConnectorArn,
                         Subject ="gpio/+/10/write",
                     },
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-state-10",
                         Source = gpioConnector.ConnectorArn,
                         Target = "cloud",
                         Subject ="gpio/+/10/state",
                     },
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-read-11",
                         Source = toggleGpioAlias.FunctionArn,
                         Target = gpioConnector.ConnectorArn,
                         Subject ="gpio/+/11/read",
                     },
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-write-11",
                         Source = toggleGpioAlias.FunctionArn,
                         Target = gpioConnector.ConnectorArn,
                         Subject ="gpio/+/11/write",
                     },
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-state-11",
                         Source = gpioConnector.ConnectorArn,
                         Target = "cloud",
                         Subject ="gpio/+/11/state",
                     },
-                    new CfnSubscriptionDefinitionVersion.SubscriptionProperty()
+                    new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
                         Id = "gpio-test",
                         Source = "cloud",
@@ -332,13 +336,22 @@ namespace MackerelAlertToAwsIot
                         Subject ="gpio/test",
                     },
                 };
-            var ggLatestSubscription = new CfnSubscriptionDefinitionVersion(this,
-                "MackerelAlertLampSubscriptionVersion-" + Utils.ToHash(string.Join("-", ggSubscriptions.Select(x => x.Id))),
-                new CfnSubscriptionDefinitionVersionProps()
+            var ggSubscription = new CfnSubscriptionDefinition(this, "MackerelAlertLampSubscription", new CfnSubscriptionDefinitionProps()
+            {
+                Name = "MackerelAlertLampSubscription",
+                InitialVersion = new CfnSubscriptionDefinition.SubscriptionDefinitionVersionProperty()
                 {
-                    SubscriptionDefinitionId = ggSubscription.AttrId,
                     Subscriptions = ggSubscriptions,
-                });
+                },
+            });
+            // Group以外のバージョンも管理しようとするとARN取るのが良く分らん。。。
+            // var ggLatestSubscription = new CfnSubscriptionDefinitionVersion(this,
+            //     "MackerelAlertLampSubscriptionVersion-" + Utils.ToHash(string.Join("-", ggSubscriptions.Select(x => x.Id))),
+            //     new CfnSubscriptionDefinitionVersionProps()
+            //     {
+            //         SubscriptionDefinitionId = ggSubscription.AttrId,
+            //         Subscriptions = ggSubscriptions,
+            //     });
 
             var ggGroup = new Amazon.CDK.AWS.Greengrass.CfnGroup(this, "MackerelAlertLampGroup", new Amazon.CDK.AWS.Greengrass.CfnGroupProps()
             {
@@ -379,7 +392,6 @@ namespace MackerelAlertToAwsIot
                 },
                 Targets = new IRuleTarget[] {
                     new LambdaFunction(cloudReceiveAlertFunction),
-                    new LambdaFunction(ggLambda),
                 },
             });
         }
