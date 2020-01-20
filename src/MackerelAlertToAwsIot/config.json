@@ -2,7 +2,7 @@
   "MackerelAlertBridgeProps": {
     "StsExternalId": "Pb4veTnup3gxas21J55tiLq6eaK1NUWlNs61te8m",
     "OrganizationName": "koudenpa-1",
-    "EventName": "trial_alerts"
+    "EventName": "koudenpi"
   },
   "MackerelAlertLampProps": {
     "ThingCerts": [

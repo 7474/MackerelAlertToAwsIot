@@ -351,7 +351,7 @@ namespace MackerelAlertToAwsIot
                 {
                     // TODO わかったら書く
                     Source = new string[]{
-                        "aws.partner/mackerel.io",
+                        "*",
                     },
                 },
                 Targets = new IRuleTarget[] {
