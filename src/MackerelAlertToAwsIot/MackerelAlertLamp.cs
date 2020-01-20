@@ -349,9 +349,8 @@ namespace MackerelAlertToAwsIot
                 EventBus = props.AlertBus,
                 EventPattern = new EventPattern()
                 {
-                    // TODO わかったら書く
-                    Source = new string[]{
-                        "*",
+                    Account = new string[]{
+                        this.Account,
                     },
                 },
                 Targets = new IRuleTarget[] {
