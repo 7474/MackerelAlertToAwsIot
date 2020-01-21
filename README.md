@@ -1,11 +1,12 @@
-# Welcome to your CDK C# project!
+# MackerelAlertToAwsIot
 
-You should explore the contents of this project. It demonstrates a CDK app with an instance of a stack (`CdkStack`)
-which contains an Amazon SQS queue that is subscribed to an Amazon SNS topic.
+This [AWS IoT Greengrass](https://aws.amazon.com/greengrass/) Solution will light up the LED when it receives an alert notification from [Mackerel's EvenBridge channel](https://mackerel.io/ja/docs/entry/howto/alerts/eventbridge).
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+## Setup
 
-It uses the [.NET Core CLI](https://docs.microsoft.com/dotnet/articles/core/) to compile and execute your project.
+T.B.D.
+
+----
 
 ## Useful commands
 
@@ -15,5 +16,3 @@ It uses the [.NET Core CLI](https://docs.microsoft.com/dotnet/articles/core/) to
 * `cdk deploy`      deploy this stack to your default AWS account/region
 * `cdk diff`        compare deployed stack with current state
 * `cdk docs`        open CDK documentation
-
-Enjoy!
