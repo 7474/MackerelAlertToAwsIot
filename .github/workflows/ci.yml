@@ -15,3 +15,10 @@ jobs:
         dotnet-version: 3.1.100
     - name: Build with dotnet
       run: dotnet build src
+
+    - name: Setup Node.js for use with actions
+      uses: actions/setup-node@v1.1.0
+    - name: npm ci
+      run: npm ci
+    - name: cdk synth
+      run: npm run cdk -- synth
