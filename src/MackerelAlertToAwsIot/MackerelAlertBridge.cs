@@ -11,30 +11,13 @@ namespace MackerelAlertToAwsIot
         public string EventName { get; set; }
     }
 
+    // XXX このスタックはMackerelと直接関連するリソースの管理にすることにした
     public class MackerelAlertBridgeStack : Stack
     {
         public IEventBus AlertBus { get; private set; }
 
         internal MackerelAlertBridgeStack(Construct scope, string id, MackerelAlertBridgeProps props) : base(scope, id, props)
         {
-            var eventBusStatement = new PolicyStatement(new PolicyStatementProps()
-            {
-                Actions = new string[]
-                {
-                    "events:CreateEventBus",
-                },
-                Resources = new string[]
-                {
-                    "*",
-                },
-            });
-            var additionalPolicy = new ManagedPolicy(this, "IntegrationRolePolicy", new ManagedPolicyProps()
-            {
-                Statements = new PolicyStatement[]
-                {
-                    eventBusStatement,
-                },
-            });
             // Ref: https://mackerel.io/ja/docs/entry/integrations/aws
             var integrationRole = new Role(this, "IntegrationRole", new RoleProps()
             {
@@ -44,7 +27,7 @@ namespace MackerelAlertToAwsIot
                 },
                 ManagedPolicies = new IManagedPolicy[]
                 {
-                    additionalPolicy,
+                    ManagedPolicy.FromAwsManagedPolicyName("AWSLambdaReadOnlyAccess"),
                 },
             });
             new CfnOutput(this, "IntegrationRoleArn", new CfnOutputProps()
@@ -52,6 +35,7 @@ namespace MackerelAlertToAwsIot
                 Value = integrationRole.RoleArn
             });
 
+            // XXX パートナーイベントソースに対するイベントバスはSaaS関係なしなので切り出す
             var eventSourceName = $"aws.partner/mackerel.io/{props.OrganizationName}/{props.EventName}";
             var mackerelAlertBus = new EventBus(this, "mackerel-alert-bus", new EventBusProps()
             {
