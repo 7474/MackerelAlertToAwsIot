@@ -14,16 +14,22 @@ namespace MackerelAlertToAwsIot
 {
     public class MackerelAlertLampProps : StackProps
     {
-        public IEventBus AlertBus { get; set; }
+        public string OrganizationName { get; set; }
+        public string EventName { get; set; }
         public string[] ThingCerts { get; set; }
     }
 
-    // Ref: https://dev.classmethod.jp/cloud/aws/aws-cdk-greengrass-rasberrypi/
+    // MackerelのEventBridge通知チャンネルへのアラート通知を受けたら、
+    // Greengrassデバイスに接続されているLampを点灯させるアプリケーションのスタック。
     public class MackerelAlertLampStack : Stack
     {
         internal MackerelAlertLampStack(Construct scope, string id, MackerelAlertLampProps props) : base(scope, id, props)
         {
             System.Console.Out.WriteLine(string.Join(",", props.ThingCerts));
+
+            // MackerelのEventBridge通知チャンネル先のパートナーイベントソース名
+            // リソース名に使用するのでここで構築しておく。
+            var eventSourceName = $"aws.partner/mackerel.io/{props.OrganizationName}/{props.EventName}";
 
             var thingPolicy = new Amazon.CDK.AWS.IoT.CfnPolicy(this, "MackerelAlertLampThingPoilcy", new Amazon.CDK.AWS.IoT.CfnPolicyProps()
             {
@@ -84,7 +90,6 @@ namespace MackerelAlertToAwsIot
                 return attach;
             }).ToList();
 
-            var mackerelAlertTopic = props.AlertBus.EventSourceName;
             var cloudReceiveAlertFunction = new Function(this, "CloudReceiveAlert", new FunctionProps()
             {
                 Runtime = Runtime.PYTHON_3_7,
@@ -92,7 +97,7 @@ namespace MackerelAlertToAwsIot
                 Handler = "ReceiveAlert.handler",
                 Environment = new Dictionary<string, string>()
                 {
-                    ["MACKEREL_ALERT_TOPIC"] = mackerelAlertTopic,
+                    ["MACKEREL_ALERT_TOPIC"] = eventSourceName,
                 },
             });
             cloudReceiveAlertFunction.AddToRolePolicy(new PolicyStatement(new PolicyStatementProps()
@@ -247,7 +252,7 @@ namespace MackerelAlertToAwsIot
                         Id = "mackerel-alert-to-device",
                         Source = "cloud",
                         Target = ggLambdaAlias.FunctionArn,
-                        Subject = mackerelAlertTopic,
+                        Subject = eventSourceName,
                     },
                     new CfnSubscriptionDefinition.SubscriptionProperty()
                     {
@@ -344,14 +349,6 @@ namespace MackerelAlertToAwsIot
                     Subscriptions = ggSubscriptions,
                 },
             });
-            // Group以外のバージョンも管理しようとするとARN取るのが良く分らん。。。
-            // var ggLatestSubscription = new CfnSubscriptionDefinitionVersion(this,
-            //     "MackerelAlertLampSubscriptionVersion-" + Utils.ToHash(string.Join("-", ggSubscriptions.Select(x => x.Id))),
-            //     new CfnSubscriptionDefinitionVersionProps()
-            //     {
-            //         SubscriptionDefinitionId = ggSubscription.AttrId,
-            //         Subscriptions = ggSubscriptions,
-            //     });
 
             var ggGroup = new Amazon.CDK.AWS.Greengrass.CfnGroup(this, "MackerelAlertLampGroup", new Amazon.CDK.AWS.Greengrass.CfnGroupProps()
             {
@@ -381,9 +378,13 @@ namespace MackerelAlertToAwsIot
             ggLatestVersion.AddDependsOn(ggConnector);
             ggLatestVersion.AddDependsOn(ggSubscription);
 
+            var mackerelAlertBus = new EventBus(this, "mackerel-alert-bus", new EventBusProps()
+            {
+                EventSourceName = eventSourceName,
+            });
             var mackerelAlertRule = new Rule(this, "mackerel-alert-rule", new RuleProps()
             {
-                EventBus = props.AlertBus,
+                EventBus = mackerelAlertBus,
                 EventPattern = new EventPattern()
                 {
                     Account = new string[]{
