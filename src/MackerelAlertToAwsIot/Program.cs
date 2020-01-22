@@ -19,10 +19,7 @@ namespace MackerelAlertToAwsIot
             var mackerelAlertBridgeProps = LoadConfig(config, env, new MackerelAlertBridgeProps());
             var mackerelAlertBridge = new MackerelAlertBridgeStack(app, "MackerelAlertBridge", mackerelAlertBridgeProps);
 
-            var mackerelAlertLampProps = LoadConfig(config, env, new MackerelAlertLampProps()
-            {
-                AlertBus = mackerelAlertBridge.AlertBus,
-            });
+            var mackerelAlertLampProps = LoadConfig(config, env, new MackerelAlertLampProps());
             var mackerelAlertLamp = new MackerelAlertLampStack(app, "MackerelAlertLamp", mackerelAlertLampProps);
 
             app.Synth();
