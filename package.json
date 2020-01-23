@@ -18,6 +18,6 @@
   "author": "koudenpa",
   "license": "MIT",
   "devDependencies": {
-    "aws-cdk": "^1.21.1"
+    "aws-cdk": "^1.22.0"
   }
 }
