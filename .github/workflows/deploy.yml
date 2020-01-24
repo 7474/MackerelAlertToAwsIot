@@ -29,11 +29,13 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-northeast-1
 
+    # デプロイされているリソースは削除できないため強制リセットしておく
     - name: Reset greengrass deploy
       run: node deploy/reset-greengrass-deploy.js
 
     - name: cdk deploy
       run: npm run cdk -- deploy "*"
 
+    # どう考えてもリソースを更新したらデプロイするのでする
     - name: Create greengrass deploy
       run: node deploy/create-greengrass-deploy.js
