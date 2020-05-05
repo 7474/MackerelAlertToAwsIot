@@ -18,7 +18,7 @@
   "author": "koudenpa",
   "license": "MIT",
   "devDependencies": {
-    "aws-cdk": "^1.22.0",
+    "aws-cdk": "^1.37.0",
     "aws-sdk": "^2.610.0"
   }
 }
