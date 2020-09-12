@@ -19,6 +19,6 @@
   "license": "MIT",
   "devDependencies": {
     "aws-cdk": "^1.22.0",
-    "aws-sdk": "^2.610.0"
+    "aws-sdk": "^2.751.0"
   }
 }
