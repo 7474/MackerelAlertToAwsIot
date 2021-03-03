@@ -18,7 +18,7 @@
 
     <!-- jsii Roslyn analyzers (un-comment to obtain compile-time checks for missing required props
     -->
-    <PackageReference Include="Amazon.Jsii.Analyzers" Version="0.21.2" PrivateAssets="all" />
+    <PackageReference Include="Amazon.Jsii.Analyzers" Version="1.24.0" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
